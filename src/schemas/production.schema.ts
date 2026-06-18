@@ -44,8 +44,6 @@ export const workOrderSchema = z.object({
   product_id: z.string().uuid().optional().or(z.literal('')),
   deadline_date: z.string().min(1, 'Deadline date is required'),
   packaging: z.enum(['SW', 'MB', 'LB']).optional(),
-  batch_code: z.string().min(1, 'Batch code is required').max(50),
-  target_qty: z.number().int().min(0, 'Target quantity must be 0 or greater'),
   quantity_kg: z.number().min(0, 'Quantity in KG must be 0 or greater').default(0),
   status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'CANCELLED']).default('DRAFT'),
   priority: z.number().int().min(1).max(10).default(5),

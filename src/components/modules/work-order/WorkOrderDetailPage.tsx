@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useWorkOrder, useProductionSessions } from '../../../hooks';
-import { ArrowLeft, Edit, ClipboardList, Calendar, Package, Hash } from 'lucide-react';
+import { ArrowLeft, CreditCard as Edit, ClipboardList, Calendar, Package, Hash } from 'lucide-react';
 import { formatDate, getStatusColor } from '../../../lib/utils';
 
 export default function WorkOrderDetailPage() {
@@ -41,7 +41,7 @@ export default function WorkOrderDetailPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{workOrder.wo_number}</h1>
-            <p className="text-gray-500 text-sm">{workOrder.batch_code}</p>
+            <p className="text-gray-500 text-sm">{workOrder.batch_code || workOrder.wo_date}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -67,7 +67,7 @@ export default function WorkOrderDetailPage() {
               <InfoItem icon={ClipboardList} label="WO Number" value={workOrder.wo_number} />
               <InfoItem icon={Calendar} label="WO Date" value={formatDate(workOrder.wo_date)} />
               <InfoItem icon={Package} label="Product" value={(workOrder as { products?: { product_name: string } }).products?.product_name || '-'} />
-              <InfoItem icon={Hash} label="Batch Code" value={workOrder.batch_code} />
+              <InfoItem icon={Hash} label="Batch Code" value={workOrder.batch_code || '-'} />
             </div>
           </div>
 
@@ -77,7 +77,7 @@ export default function WorkOrderDetailPage() {
             <div className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Target Quantity</span>
-                <span className="font-medium">{workOrder.target_qty.toLocaleString()}</span>
+                <span className="font-medium">{(workOrder.target_qty ?? 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Completed Quantity</span>
@@ -87,12 +87,12 @@ export default function WorkOrderDetailPage() {
                 <div
                   className="bg-green-500 h-4 rounded-full"
                   style={{
-                    width: `${Math.min((workOrder.completed_qty / workOrder.target_qty) * 100, 100)}%`
+                    width: `${Math.min((workOrder.completed_qty / (workOrder.target_qty || 1)) * 100, 100)}%`
                   }}
                 ></div>
               </div>
               <div className="text-center text-sm text-gray-500">
-                {((workOrder.completed_qty / workOrder.target_qty) * 100).toFixed(1)}% Completed
+                {((workOrder.completed_qty / (workOrder.target_qty || 1)) * 100).toFixed(1)}% Completed
               </div>
             </div>
           </div>

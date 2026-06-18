@@ -26,7 +26,7 @@ export default function WorkOrderFormPage() {
     setValue,
     watch,
     formState: { errors, isSubmitting }
-  } = useForm<WorkOrderFormData>({ resolver: zodResolver(workOrderSchema) as any });
+  } = useForm<WorkOrderFormData>({ resolver: zodResolver(workOrderSchema) as never });
 
   const watchedBuyer = watch('buyer');
 
@@ -35,11 +35,9 @@ export default function WorkOrderFormPage() {
       reset({
         wo_number: workOrder.wo_number,
         wo_date: workOrder.wo_date,
-        buyer: workOrder.buyer as any || '',
+        buyer: workOrder.buyer as (typeof BUYERS)[number] | undefined,
         deadline_date: workOrder.deadline_date || '',
-        packaging: workOrder.packaging as any || '',
-        batch_code: workOrder.batch_code,
-        target_qty: workOrder.target_qty,
+        packaging: workOrder.packaging as (typeof PACKAGING)[number] | undefined,
         quantity_kg: workOrder.quantity_kg,
         status: workOrder.status,
         priority: workOrder.priority,
@@ -50,7 +48,6 @@ export default function WorkOrderFormPage() {
     }
   }, [workOrder, isEditing, reset]);
 
-  // Generate WO number for new work orders
   useEffect(() => {
     if (!id && !isEditing && watchedBuyer) {
       const today = new Date();
@@ -70,14 +67,16 @@ export default function WorkOrderFormPage() {
         buyer_id: undefined,
         product_id: undefined,
         buyer: data.buyer || undefined,
-        packaging: data.packaging || undefined
+        packaging: data.packaging || undefined,
+        batch_code: '',
+        target_qty: 0,
       };
 
       if (id && isEditing) {
-        await updateWorkOrder.mutateAsync({ id, data: submitData as any });
+        await updateWorkOrder.mutateAsync({ id, data: submitData as never });
         navigate(`/work-orders/${id}`);
       } else {
-        const result = await createWorkOrder.mutateAsync(submitData as any);
+        const result = await createWorkOrder.mutateAsync(submitData as never);
         navigate(`/work-orders/${result.id}`);
       }
     } catch (error) {
@@ -155,7 +154,7 @@ export default function WorkOrderFormPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Packaging *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Packaging</label>
               <select
                 {...register('packaging')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -165,7 +164,6 @@ export default function WorkOrderFormPage() {
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
-              {errors.packaging && <p className="mt-1 text-sm text-red-500">{errors.packaging.message}</p>}
             </div>
 
             <div>
@@ -184,24 +182,20 @@ export default function WorkOrderFormPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Batch Code *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Planned Start Date</label>
               <input
-                {...register('batch_code')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.batch_code ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="e.g., BATCH-2024-001"
+                type="date"
+                {...register('planned_start_date')}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
-              {errors.batch_code && <p className="mt-1 text-sm text-red-500">{errors.batch_code.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Target Quantity</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Planned End Date</label>
               <input
-                type="number"
-                {...register('target_qty', { valueAsNumber: true })}
+                type="date"
+                {...register('planned_end_date')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                min="0"
               />
             </div>
 

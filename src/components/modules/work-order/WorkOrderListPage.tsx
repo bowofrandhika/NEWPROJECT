@@ -21,7 +21,7 @@ export default function WorkOrderListPage() {
   const filteredOrders = currentOrders?.filter(order =>
     search
       ? order.wo_number.toLowerCase().includes(search.toLowerCase()) ||
-        order.batch_code.toLowerCase().includes(search.toLowerCase()) ||
+        (order.batch_code && order.batch_code.toLowerCase().includes(search.toLowerCase())) ||
         (order.buyer && order.buyer.toLowerCase().includes(search.toLowerCase()))
       : true
   );

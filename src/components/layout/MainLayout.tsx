@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth, useUnreadWONotifications } from '../../hooks';
 import {
@@ -28,42 +28,42 @@ import {
 interface NavItem {
   name: string;
   path?: string;
-  icon: ReactNode;
-  access?: string[];
+  icon: React.ReactNode;
+  access?: string;
   children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { name: 'Work Orders', path: '/work-orders', icon: <ClipboardList className="w-5 h-5" />, access: ['production', 'issues', 'reports'] },
-  { name: 'Daily Instructions', path: '/daily-instructions', icon: <CalendarDays className="w-5 h-5" />, access: ['production'] },
+  { name: 'Work Orders', path: '/work-orders', icon: <ClipboardList className="w-5 h-5" />, access: 'production' },
+  { name: 'Daily Instructions', path: '/daily-instructions', icon: <CalendarDays className="w-5 h-5" />, access: 'production' },
   {
     name: 'Production',
     icon: <Factory className="w-5 h-5" />,
-    access: ['production'],
+    access: 'production',
     children: [
-      { name: 'Pre-Production', path: '/daily-instructions', icon: <Settings className="w-4 h-4" />, access: ['production'] },
-      { name: 'Production Log', path: '/daily-instructions', icon: <Package className="w-4 h-4" />, access: ['production'] },
-      { name: 'Dryer Monitoring', path: '/daily-instructions', icon: <Gauge className="w-4 h-4" />, access: ['production'] },
-      { name: 'Packing', path: '/daily-instructions', icon: <Package className="w-4 h-4" />, access: ['production'] }
+      { name: 'Pre-Production', path: '/pre-production', icon: <Settings className="w-4 h-4" /> },
+      { name: 'Production Log', path: '/production', icon: <Package className="w-4 h-4" /> },
+      { name: 'Dryer Monitoring', path: '/dryer', icon: <Gauge className="w-4 h-4" /> },
+      { name: 'Packing', path: '/packing', icon: <Package className="w-4 h-4" /> },
     ]
   },
   {
     name: 'Issues',
     icon: <AlertTriangle className="w-5 h-5" />,
-    access: ['issues'],
+    access: 'issues',
     children: [
-      { name: 'Bottleneck', path: '/daily-instructions', icon: <AlertTriangle className="w-4 h-4" />, access: ['issues'] },
-      { name: 'Downtime', path: '/daily-instructions', icon: <Clock className="w-4 h-4" />, access: ['issues'] }
+      { name: 'Bottleneck', path: '/bottleneck', icon: <AlertTriangle className="w-4 h-4" /> },
+      { name: 'Downtime', path: '/downtime', icon: <Clock className="w-4 h-4" /> },
     ]
   },
-  { name: 'OEE Dashboard', path: '/oee', icon: <BarChart3 className="w-5 h-5" />, access: ['reports'] },
-  { name: 'Traceability', path: '/traceability', icon: <PackageSearch className="w-5 h-5" />, access: ['production'] },
-  { name: 'Maintenance', path: '/maintenance', icon: <Wrench className="w-5 h-5" />, access: ['production'] },
-  { name: 'Quality', path: '/quality', icon: <ShieldCheck className="w-5 h-5" />, access: ['production'] },
-  { name: 'Reports', path: '/reports', icon: <FileText className="w-5 h-5" />, access: ['reports'] },
-  { name: 'User Management', path: '/admin/users', icon: <Users className="w-5 h-5" />, access: ['users'] },
-  { name: 'Master Data', path: '/admin/master', icon: <Settings className="w-5 h-5" />, access: ['master_data'] }
+  { name: 'OEE Dashboard', path: '/oee', icon: <BarChart3 className="w-5 h-5" />, access: 'reports' },
+  { name: 'Traceability', path: '/traceability', icon: <PackageSearch className="w-5 h-5" />, access: 'production' },
+  { name: 'Maintenance', path: '/maintenance', icon: <Wrench className="w-5 h-5" />, access: 'production' },
+  { name: 'Quality', path: '/quality', icon: <ShieldCheck className="w-5 h-5" />, access: 'production' },
+  { name: 'Reports', path: '/reports', icon: <FileText className="w-5 h-5" />, access: 'reports' },
+  { name: 'User Management', path: '/admin/users', icon: <Users className="w-5 h-5" />, access: 'users' },
+  { name: 'Master Data', path: '/admin/master', icon: <Settings className="w-5 h-5" />, access: 'master_data' },
 ];
 
 export default function MainLayout() {
@@ -79,11 +79,13 @@ export default function MainLayout() {
     navigate('/login');
   };
 
-  const filteredNavItems = navItems.filter(item => {
+  const isVisible = (item: NavItem): boolean => {
     if (isSuperUser()) return true;
     if (!item.access) return true;
-    return item.access.some(access => canAccess(access));
-  });
+    return canAccess(item.access);
+  };
+
+  const filteredNavItems = navItems.filter(isVisible);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -141,7 +143,7 @@ export default function MainLayout() {
                         {item.children.map((child) => (
                           <li key={child.name}>
                             <Link
-                              to={child.path || `/${child.name.toLowerCase().replace(' ', '-')}`}
+                              to={child.path!}
                               className="flex items-center space-x-2 px-3 py-2 text-slate-400 rounded-lg hover:bg-slate-800"
                             >
                               {child.icon}
@@ -198,7 +200,6 @@ export default function MainLayout() {
               </div>
             )}
           </div>
-          {/* Notifications for super user */}
           {isSuperUser() && unreadNotifications && unreadNotifications.length > 0 && sidebarOpen && (
             <div className="mt-3 p-2 bg-red-900/50 rounded-lg border border-red-800/50">
               <div className="flex items-center gap-2">

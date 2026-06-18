@@ -91,8 +91,8 @@ export interface WorkOrder {
   product_id?: string;
   deadline_date?: string;
   packaging?: string;
-  batch_code: string;
-  target_qty: number;
+  batch_code?: string;
+  target_qty?: number;
   quantity_kg: number;
   completed_qty: number;
   completed_kg: number;
