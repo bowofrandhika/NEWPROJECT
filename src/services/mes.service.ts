@@ -135,7 +135,6 @@ export const maintenanceRecordService = {
   },
 
   async complete(id: string, workPerformed?: string): Promise<MaintenanceRecord> {
-    const { data: { user } } = await supabase.auth.getUser();
     return this.update(id, {
       status: 'COMPLETED',
       actual_end_date: new Date().toISOString().split('T')[0],
@@ -184,7 +183,7 @@ export const inspectionService = {
 
     const sampleQty = inspection.sample_qty || 0;
     const passedQty = inspection.passed_qty || 0;
-    const failedQty = inspection.failed_qty || 0;
+    const failedQty = inspection.failed_qty || 0; void failedQty;
     const passRate = sampleQty > 0 ? Math.round((passedQty / sampleQty) * 100 * 100) / 100 : 0;
 
     let result: 'PENDING' | 'PASSED' | 'FAILED' | 'CONDITIONAL' = 'PENDING';
@@ -398,7 +397,7 @@ export const oeeService = {
 
     const plannedTime = record.planned_production_time_minutes || 0;
     const runTime = record.run_time_minutes || 0;
-    const operatingTime = record.operating_time_minutes || 0;
+    const operatingTime = record.operating_time_minutes || 0; void operatingTime;
     const idealRate = record.ideal_run_rate || 1;
     const totalOutput = record.total_output || 0;
     const goodOutput = record.good_output || 0;
@@ -451,12 +450,14 @@ export const oeeService = {
       return { avgOEE: 0, avgAvailability: 0, avgPerformance: 0, avgQuality: 0, count: 0 };
     }
 
+    type OEERow = { oee: number | null; availability: number | null; performance: number | null; quality: number | null };
+    const rows = data as OEERow[];
     return {
-      avgOEE: Math.round(data.reduce((sum: number, r: OEERecord) => sum + (r.oee || 0), 0) / data.length * 100) / 100,
-      avgAvailability: Math.round(data.reduce((sum: number, r: OEERecord) => sum + (r.availability || 0), 0) / data.length * 100) / 100,
-      avgPerformance: Math.round(data.reduce((sum: number, r: OEERecord) => sum + (r.performance || 0), 0) / data.length * 100) / 100,
-      avgQuality: Math.round(data.reduce((sum: number, r: OEERecord) => sum + (r.quality || 0), 0) / data.length * 100) / 100,
-      count: data.length
+      avgOEE: Math.round(rows.reduce((sum, r) => sum + (r.oee || 0), 0) / rows.length * 100) / 100,
+      avgAvailability: Math.round(rows.reduce((sum, r) => sum + (r.availability || 0), 0) / rows.length * 100) / 100,
+      avgPerformance: Math.round(rows.reduce((sum, r) => sum + (r.performance || 0), 0) / rows.length * 100) / 100,
+      avgQuality: Math.round(rows.reduce((sum, r) => sum + (r.quality || 0), 0) / rows.length * 100) / 100,
+      count: rows.length
     };
   }
 };

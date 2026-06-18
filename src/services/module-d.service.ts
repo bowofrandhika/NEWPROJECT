@@ -127,7 +127,8 @@ export const palletTrackingService = {
       .maybeSingle();
 
     if (error) throw error;
-    return data?.pallet_tracking || null;
+    const pt = data?.pallet_tracking;
+    return (Array.isArray(pt) ? pt[0] : pt) as PalletTracking | null;
   },
 
   async scanQRCode(qrCode: string, location?: string): Promise<PalletTracking | null> {

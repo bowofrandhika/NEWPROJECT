@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useBuyers, useCreateBuyer, useProducts, useCreateProduct, useLines, useCreateLine, useShifts, useCreateShift, useDryers, useCreateDryer, useTrolleys, useCreateTrolley } from '../../../hooks';
-import { Database, Users, Package, Factory, Clock, Thermometer, ShoppingBag } from 'lucide-react';
+import { useBuyers, useProducts, useLines, useShifts, useDryers, useTrolleys } from '../../../hooks';
+import { Users, Package, Factory, Clock, Thermometer, ShoppingBag } from 'lucide-react';
 
 export default function MasterDataPage() {
   const [activeTab, setActiveTab] = useState('buyers');

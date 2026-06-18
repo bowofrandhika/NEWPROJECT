@@ -1,9 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useProductionSession, usePreProductionChecklist, useOutputSummary, useDowntimeRecords, useRejectRecords } from '../../../hooks';
-import {
-  ArrowLeft, Edit, Play, CheckCircle, Settings, Package, Gauge,
-  AlertTriangle, Clock, BarChart3
-} from 'lucide-react';
+import { ArrowLeft, CreditCard as Edit, Settings, Package, Gauge, AlertTriangle, Clock, BarChart3 } from 'lucide-react';
 import { formatDate, getStatusColor } from '../../../lib/utils';
 
 export default function DailyInstructionDetailPage() {

@@ -1,14 +1,14 @@
 import { useParams, Link } from 'react-router-dom';
 import {
   usePreProductionChecklist, useCreatePreProductionChecklist, useApprovePreProductionChecklist,
-  useChecklistItems, useCheckChecklistItem, useToolsInspections, useCreateToolsInspection,
+  useChecklistItems, useCheckChecklistItem, useToolsInspections,
   useManpowerRecords, useCreateManpowerRecord, useProductionSession
 } from '../../../hooks';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { manpowerRecordSchema, type ManpowerRecordFormData } from '../../../schemas';
-import { ArrowLeft, Check, Plus, X, Settings, Users, Wrench } from 'lucide-react';
+import { ArrowLeft, Check, Plus, X } from 'lucide-react';
 import { formatDateTime, getStatusColor } from '../../../lib/utils';
 
 export default function PreProductionPage() {
@@ -22,20 +22,19 @@ export default function PreProductionPage() {
   const createChecklist = useCreatePreProductionChecklist();
   const approveChecklist = useApprovePreProductionChecklist();
   const checkItem = useCheckChecklistItem();
-  const createToolsInspection = useCreateToolsInspection();
   const createManpowerRecord = useCreateManpowerRecord();
 
   const [showManpowerForm, setShowManpowerForm] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ManpowerRecordFormData>({
-    resolver: zodResolver(manpowerRecordSchema)
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ManpowerRecordFormData>({ resolver: zodResolver(manpowerRecordSchema) as any });
 
   const handleCreateChecklist = async () => {
     if (sessionId) {
       await createChecklist.mutateAsync({
         production_session_id: sessionId,
-        checklist_date: new Date().toISOString().split('T')[0]
+        checklist_date: new Date().toISOString().split('T')[0],
+        status: 'PENDING'
       });
     }
   };
@@ -58,17 +57,6 @@ export default function PreProductionPage() {
     reset();
     setShowManpowerForm(false);
   };
-
-  const defaultChecklistItems = [
-    { item_name: 'Safety equipment checked', category: 'Safety', sort_order: 1 },
-    { item_name: 'Machine guards in place', category: 'Safety', sort_order: 2 },
-    { item_name: 'Emergency stops functional', category: 'Safety', sort_order: 3 },
-    { item_name: 'PPE available', category: 'Safety', sort_order: 4 },
-    { item_name: 'Work area clean', category: 'Housekeeping', sort_order: 5 },
-    { item_name: 'Materials properly stored', category: 'Housekeeping', sort_order: 6 },
-    { item_name: 'Ventilation working', category: 'Environment', sort_order: 7 },
-    { item_name: 'Lighting adequate', category: 'Environment', sort_order: 8 }
-  ];
 
   return (
     <div className="p-6">

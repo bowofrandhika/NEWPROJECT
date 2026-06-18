@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useProductionSession, useBottleneckRecords, useCreateBottleneckRecord, useResolveBottleneck, useCorrectiveActions } from '../../../hooks';
+import { useProductionSession, useBottleneckRecords, useResolveBottleneck } from '../../../hooks';
 import { ArrowLeft, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 import { formatDateTime, getStatusColor } from '../../../lib/utils';
 
@@ -7,7 +7,6 @@ export default function BottleneckPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { data: session } = useProductionSession(sessionId!);
   const { data: bottlenecks } = useBottleneckRecords(sessionId!);
-  const createBottleneck = useCreateBottleneckRecord();
   const resolveBottleneck = useResolveBottleneck();
 
   const activeCount = bottlenecks?.filter(b => b.status !== 'RESOLVED').length || 0;

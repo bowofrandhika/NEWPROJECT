@@ -1,7 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
-import { useProductionSession, useProductionLogs, useCreateProductionLog, useOutputSummary, useCreateOutputSummary, useFuelConsumptions, useCreateFuelConsumption } from '../../../hooks';
+import { useProductionSession, useProductionLogs, useFuelConsumptions } from '../../../hooks';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { ArrowLeft, Plus, BarChart3, Fuel, Package } from 'lucide-react';
 import { formatDateTime } from '../../../lib/utils';
 
@@ -9,12 +8,7 @@ export default function ProductionProcessPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { data: session } = useProductionSession(sessionId!);
   const { data: logs } = useProductionLogs(sessionId!);
-  const { data: outputSummary } = useOutputSummary(sessionId!);
   const { data: fuelConsumptions } = useFuelConsumptions(sessionId!);
-
-  const createLog = useCreateProductionLog();
-  const createOutputSummary = useCreateOutputSummary();
-  const createFuel = useCreateFuelConsumption();
 
   const [showLogForm, setShowLogForm] = useState(false);
 

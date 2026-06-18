@@ -1,6 +1,5 @@
 import { useWorkOrders, useProductionSessions } from '../../../hooks';
 import { FileText, Download } from 'lucide-react';
-import { formatDate } from '../../../lib/utils';
 
 export default function ReportsPage() {
   const { data: workOrders } = useWorkOrders();

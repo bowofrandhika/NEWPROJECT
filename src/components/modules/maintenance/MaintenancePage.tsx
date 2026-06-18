@@ -1,5 +1,5 @@
 import { useMaintenanceSchedules, useOverdueMaintenance, useMaintenanceRecords } from '../../../hooks';
-import { Wrench, Clock, AlertTriangle, CheckCircle, Plus } from 'lucide-react';
+import { Clock, AlertTriangle, CheckCircle, Plus } from 'lucide-react';
 import { formatDate, getStatusColor } from '../../../lib/utils';
 
 export default function MaintenancePage() {

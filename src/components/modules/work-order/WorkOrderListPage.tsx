@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWorkOrders, useDeleteWorkOrder } from '../../../hooks';
-import { Plus, Search, Filter, MoreVertical, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
 import { formatDate, getStatusColor } from '../../../lib/utils';
 
 export default function WorkOrderListPage() {

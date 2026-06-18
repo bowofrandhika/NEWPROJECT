@@ -64,7 +64,7 @@ const navItems: NavItem[] = [
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, appUser, logout, hasRole } = useAuth();
+  const { appUser, logout, hasRole } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
 

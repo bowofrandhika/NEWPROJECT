@@ -2,7 +2,7 @@ import { useOEESummary } from '../../../hooks';
 import { BarChart3, TrendingUp, Clock, Package, Gauge } from 'lucide-react';
 
 export default function OEEDashboardPage() {
-  const { data: oeeSummary, isLoading } = useOEESummary();
+  const { data: oeeSummary } = useOEESummary();
 
   const metrics = [
     {

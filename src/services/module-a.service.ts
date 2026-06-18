@@ -88,7 +88,7 @@ export const checklistItemService = {
     return this.update(id, {
       is_checked: isChecked,
       checked_by: user?.id,
-      checked_at: isChecked ? new Date().toISOString() : null
+      checked_at: isChecked ? new Date().toISOString() : undefined
     });
   },
 

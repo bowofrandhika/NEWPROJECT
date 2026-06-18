@@ -24,9 +24,8 @@ export default function WorkOrderFormPage() {
     reset,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm<WorkOrderFormData>({
-    resolver: zodResolver(workOrderSchema)
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } = useForm<WorkOrderFormData>({ resolver: zodResolver(workOrderSchema) as any });
 
   useEffect(() => {
     if (workOrder && isEditing) {
@@ -67,10 +66,10 @@ export default function WorkOrderFormPage() {
       };
 
       if (id && isEditing) {
-        await updateWorkOrder.mutateAsync({ id, data: submitData });
+        await updateWorkOrder.mutateAsync({ id, data: submitData as unknown as Parameters<typeof updateWorkOrder.mutateAsync>[0]['data'] });
         navigate(`/work-orders/${id}`);
       } else {
-        const result = await createWorkOrder.mutateAsync(submitData as WorkOrderFormData & { buyer_id?: string; product_id?: string });
+        const result = await createWorkOrder.mutateAsync(submitData as unknown as Parameters<typeof createWorkOrder.mutateAsync>[0]);
         navigate(`/work-orders/${result.id}`);
       }
     } catch (error) {

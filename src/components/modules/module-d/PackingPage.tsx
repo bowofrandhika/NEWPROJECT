@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useProductionSession, usePalletTrackings, useCreatePalletTracking, useVerifyPallet } from '../../../hooks';
+import { useProductionSession, usePalletTrackings, useVerifyPallet } from '../../../hooks';
 import { useState } from 'react';
 import { ArrowLeft, Plus, Package, QrCode } from 'lucide-react';
 import { formatDate, getStatusColor } from '../../../lib/utils';
@@ -8,7 +8,6 @@ export default function PackingPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { data: session } = useProductionSession(sessionId!);
   const { data: pallets } = usePalletTrackings(sessionId!);
-  const createPallet = useCreatePalletTracking();
   const verifyPallet = useVerifyPallet();
 
   const [showForm, setShowForm] = useState(false);

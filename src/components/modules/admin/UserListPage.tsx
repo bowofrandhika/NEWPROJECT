@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../../../hooks';
-import { Plus, Search, Edit, Trash2, Users } from 'lucide-react';
-import { formatDate, getStatusColor } from '../../../lib/utils';
+import { useUsers, useDeleteUser } from '../../../hooks';
+import { Plus, Search, CreditCard as Edit, Trash2 } from 'lucide-react';
+import { formatDate } from '../../../lib/utils';
 
 export default function UserListPage() {
   const [search, setSearch] = useState('');
   const { data: users, isLoading } = useUsers();
-  const createUser = useCreateUser();
-  const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
 
   const filteredUsers = users?.filter(user =>
@@ -86,7 +84,7 @@ export default function UserListPage() {
                   <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                      user.role === 'ADMIN' ? 'bg-red-100 text-red-800' :
                       user.role === 'SPV' ? 'bg-blue-100 text-blue-800' :
                       user.role === 'MANDOR' ? 'bg-green-100 text-green-800' :
                       'bg-gray-100 text-gray-800'

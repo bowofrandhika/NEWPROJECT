@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useProductionSession, useDowntimeRecords, useCreateDowntimeRecord, useAcknowledgeDowntime, useResolveDowntime } from '../../../hooks';
+import { useProductionSession, useDowntimeRecords, useAcknowledgeDowntime, useResolveDowntime } from '../../../hooks';
 import { ArrowLeft, Plus, Clock, Play, CheckCircle } from 'lucide-react';
 import { formatDateTime, getStatusColor } from '../../../lib/utils';
 
@@ -7,7 +7,6 @@ export default function DowntimePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { data: session } = useProductionSession(sessionId!);
   const { data: downtimes } = useDowntimeRecords(sessionId!);
-  const createDowntime = useCreateDowntimeRecord();
   const acknowledgeDowntime = useAcknowledgeDowntime();
   const resolveDowntime = useResolveDowntime();
 

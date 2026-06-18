@@ -27,9 +27,8 @@ export default function DailyInstructionFormPage() {
     reset,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm<ProductionSessionFormData>({
-    resolver: zodResolver(productionSessionSchema)
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } = useForm<ProductionSessionFormData>({ resolver: zodResolver(productionSessionSchema) as any });
 
   useEffect(() => {
     if (session && isEditing) {
@@ -74,7 +73,7 @@ export default function DailyInstructionFormPage() {
         await updateSession.mutateAsync({ id, data: submitData as ProductionSessionFormData & { work_order_id?: string; shift_id?: string; line_id?: string; buyer_id?: string } });
         navigate(`/daily-instructions/${id}`);
       } else {
-        const result = await createSession.mutateAsync(submitData as ProductionSessionFormData & { work_order_id?: string; shift_id?: string; line_id?: string; buyer_id?: string });
+        const result = await createSession.mutateAsync(submitData as unknown as Parameters<typeof createSession.mutateAsync>[0]);
         navigate(`/daily-instructions/${result.id}`);
       }
     } catch (error) {
