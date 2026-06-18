@@ -95,11 +95,32 @@ export const userService = {
     return data;
   },
 
+  async uploadPhoto(userId: string, file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const filePath = `user-photos/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    await this.update(userId, { photo_url: publicUrl });
+
+    return publicUrl;
+  },
+
   async hasRole(requiredRole: UserRole): Promise<boolean> {
     const profile = await this.getCurrentUserProfile();
     if (!profile) return false;
 
     const roleHierarchy: Record<UserRole, number> = {
+      'SUPER_USER': 10,
       'ADMIN': 5,
       'SPV': 4,
       'MANDOR': 3,

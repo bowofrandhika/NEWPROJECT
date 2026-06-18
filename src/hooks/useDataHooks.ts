@@ -6,6 +6,9 @@ import * as lineService from '../services/master-data.service';
 import * as shiftService from '../services/master-data.service';
 import * as dryerService from '../services/master-data.service';
 import * as trolleyService from '../services/master-data.service';
+import { sessionChecklistItemService } from '../services/session-checklist.service';
+import { productionLogDetailsService } from '../services/production-log-details.service';
+import { woNotificationService } from '../services/wo-notification.service';
 
 // User hooks
 export const useUsers = () => {
@@ -339,6 +342,113 @@ export const useDeleteTrolley = () => {
     mutationFn: trolleyService.trolleyService.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trolleys'] });
+    }
+  });
+};
+
+// Foremen hooks
+export const useForemen = () => {
+  return useQuery({
+    queryKey: ['foremen'],
+    queryFn: () => userService.userService.getAll().then(users => users.filter(u => u.role === 'MANDOR'))
+  });
+};
+
+// Session Checklist Item hooks
+export const useSessionChecklistItems = (sessionId: string) => {
+  return useQuery({
+    queryKey: ['sessionChecklistItems', sessionId],
+    queryFn: () => sessionChecklistItemService.getBySessionId(sessionId),
+    enabled: !!sessionId
+  });
+};
+
+export const useCreateSessionChecklistItems = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (items: { production_session_id: string; item_name: string; sort_order: number }[]) =>
+      sessionChecklistItemService.createMany(items),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['sessionChecklistItems', variables[0]?.production_session_id] });
+    }
+  });
+};
+
+export const useUpdateSessionChecklistItem = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      sessionChecklistItemService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessionChecklistItems'] });
+    }
+  });
+};
+
+// Production Log Details hooks
+export const useProductionLogDetails = (sessionId: string) => {
+  return useQuery({
+    queryKey: ['productionLogDetails', sessionId],
+    queryFn: () => productionLogDetailsService.getBySessionId(sessionId),
+    enabled: !!sessionId
+  });
+};
+
+export const useUpsertProductionLogDetails = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sessionId, data }: { sessionId: string; data: Record<string, unknown> }) =>
+      productionLogDetailsService.upsertBySessionId(sessionId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['productionLogDetails', variables.sessionId] });
+    }
+  });
+};
+
+// WO Notification hooks
+export const useWONotifications = () => {
+  return useQuery({
+    queryKey: ['woNotifications'],
+    queryFn: () => woNotificationService.getAll()
+  });
+};
+
+export const useUnreadWONotifications = () => {
+  return useQuery({
+    queryKey: ['woNotifications', 'unread'],
+    queryFn: () => woNotificationService.getUnread()
+  });
+};
+
+export const useMarkWONotificationRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => woNotificationService.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['woNotifications'] });
+    }
+  });
+};
+
+export const useMarkAllWONotificationsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => woNotificationService.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['woNotifications'] });
+    }
+  });
+};
+
+// User Photo Upload
+export const useUploadUserPhoto = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, file }: { userId: string; file: File }) =>
+      userService.userService.uploadPhoto(userId, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
     }
   });
 };

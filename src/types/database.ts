@@ -1,6 +1,6 @@
 // Database Types - Generated from Supabase Schema
 
-export type UserRole = 'ADMIN' | 'SPV' | 'MANDOR' | 'DRYER_OPERATOR' | 'PACKING_OPERATOR';
+export type UserRole = 'SUPER_USER' | 'ADMIN' | 'SPV' | 'MANDOR' | 'DRYER_OPERATOR' | 'PACKING_OPERATOR';
 export type ShiftType = 'MORNING' | 'AFTERNOON' | 'NIGHT';
 export type ProductionStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
@@ -11,6 +11,7 @@ export interface AppUser {
   full_name: string;
   email: string;
   role: UserRole;
+  photo_url?: string;
   plant_code?: string;
   department?: string;
   phone?: string;
@@ -86,10 +87,15 @@ export interface WorkOrder {
   wo_number: string;
   wo_date: string;
   buyer_id?: string;
+  buyer?: string;
   product_id?: string;
+  deadline_date?: string;
+  packaging?: string;
   batch_code: string;
   target_qty: number;
+  quantity_kg: number;
   completed_qty: number;
+  completed_kg: number;
   status: ProductionStatus;
   priority?: number;
   notes?: string;
@@ -97,6 +103,8 @@ export interface WorkOrder {
   planned_end_date?: string;
   actual_start_date?: string;
   actual_end_date?: string;
+  notification_sent: boolean;
+  wo_completion_confirmed: boolean;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -109,17 +117,75 @@ export interface ProductionSession {
   work_order_id?: string;
   session_date: string;
   shift_id?: string;
+  shift?: string;
   line_id?: string;
+  line?: string;
   buyer_id?: string;
   batch?: string;
+  packaging?: string;
   target_production: number;
+  production_target_kg: number;
   actual_production: number;
+  actual_production_kg: number;
   status: ProductionStatus;
   notes?: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
   updated_by?: string;
+}
+
+// New Session Checklist Items
+export interface SessionChecklistItem {
+  id: string;
+  production_session_id: string;
+  item_name: string;
+  initial_condition?: 'OK' | 'NG';
+  final_condition?: 'OK' | 'NG';
+  initial_remarks?: string;
+  final_remarks?: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// New Production Log Details
+export interface ProductionLogDetails {
+  id: string;
+  production_session_id: string;
+  foreman_id?: string;
+  production_start_time?: string;
+  production_end_time?: string;
+  material_room?: string;
+  material_deck?: string;
+  material_update_date?: string;
+  material_drying_time_days?: number;
+  material_visual_condition?: 'Clean' | 'Moderate' | 'Dirty';
+  material_line_cleaning?: 'Clean' | 'Moderate' | 'Dirty';
+  material_remarks?: string;
+  avg_cake_weight?: number;
+  variation?: string;
+  process_remarks?: string;
+  bale_count: number;
+  pallet_count: number;
+  total_weight_kg: number;
+  diesel_start_l?: number;
+  diesel_end_l?: number;
+  diesel_consumption_l?: number;
+  pks_consumption_kg?: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  updated_by?: string;
+}
+
+// WO Completion Notification
+export interface WONotification {
+  id: string;
+  work_order_id: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
 }
 
 // Module A Types

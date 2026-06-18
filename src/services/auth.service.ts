@@ -7,15 +7,18 @@ export interface AuthUser {
   appUser: AppUser | null;
 }
 
+export interface SignUpData {
+  username: string;
+  full_name: string;
+  role: UserRole;
+  phone?: string;
+  plant_code?: string;
+  department?: string;
+  photo_url?: string;
+}
+
 export const authService = {
-  async signUp(email: string, password: string, userData: {
-    username: string;
-    full_name: string;
-    role: UserRole;
-    phone?: string;
-    plant_code?: string;
-    department?: string;
-  }) {
+  async signUp(email: string, password: string, userData: SignUpData) {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -40,7 +43,8 @@ export const authService = {
         role: userData.role,
         phone: userData.phone,
         plant_code: userData.plant_code,
-        department: userData.department
+        department: userData.department,
+        photo_url: userData.photo_url
       })
       .select()
       .single();

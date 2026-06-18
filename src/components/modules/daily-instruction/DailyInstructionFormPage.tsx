@@ -3,8 +3,12 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { productionSessionSchema, type ProductionSessionFormData } from '../../../schemas';
-import { useProductionSession, useCreateProductionSession, useUpdateProductionSession, useWorkOrders, useShifts, useLines, useBuyers } from '../../../hooks';
+import { useProductionSession, useCreateProductionSession, useUpdateProductionSession } from '../../../hooks';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+
+const SHIFTS = ['Morning', 'Afternoon'] as const;
+const LINES = ['A', 'B', 'AB'] as const;
+const PACKAGING = ['SW', 'MB', 'LB'] as const;
 
 export default function DailyInstructionFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,11 +17,6 @@ export default function DailyInstructionFormPage() {
   const navigate = useNavigate();
 
   const { data: session } = useProductionSession(id!);
-  const { data: workOrders } = useWorkOrders({ status: 'ACTIVE' });
-  const { data: shifts } = useShifts();
-  const { data: lines } = useLines();
-  const { data: buyers } = useBuyers();
-
   const createSession = useCreateProductionSession();
   const updateSession = useUpdateProductionSession();
 
@@ -26,9 +25,13 @@ export default function DailyInstructionFormPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ProductionSessionFormData>({ resolver: zodResolver(productionSessionSchema) as any });
+
+  const watchedShift = watch('shift');
+  const watchedLine = watch('line');
+  const watchedSessionDate = watch('session_date');
 
   useEffect(() => {
     if (session && isEditing) {
@@ -36,10 +39,12 @@ export default function DailyInstructionFormPage() {
         session_number: session.session_number,
         work_order_id: session.work_order_id || '',
         session_date: session.session_date,
-        shift_id: session.shift_id || '',
-        line_id: session.line_id || '',
+        shift: session.shift as any || '',
+        line: session.line as any || '',
         buyer_id: session.buyer_id || '',
         batch: session.batch || '',
+        packaging: session.packaging as any || '',
+        production_target_kg: session.production_target_kg,
         target_production: session.target_production,
         status: session.status,
         notes: session.notes || ''
@@ -47,33 +52,37 @@ export default function DailyInstructionFormPage() {
     }
   }, [session, isEditing, reset]);
 
+  // Generate Session number for new sessions
   useEffect(() => {
-    if (!id && !isEditing) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-      setValue('session_number', `PS-${year}${month}${day}-${random}`);
-      setValue('session_date', today.toISOString().split('T')[0]);
+    if (!id && !isEditing && watchedSessionDate && watchedShift && watchedLine) {
+      const date = new Date(watchedSessionDate);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(2);
+      const shiftNum = watchedShift === 'Morning' ? '1' : '2';
+      const lineCode = watchedLine;
+      setValue('session_number', `PBS.DP.${day}${month}${year}.${shiftNum}.${lineCode}.`);
     }
-  }, [id, isEditing, setValue]);
+  }, [id, isEditing, watchedSessionDate, watchedShift, watchedLine, setValue]);
 
   const onSubmit = async (data: ProductionSessionFormData) => {
     try {
       const submitData = {
         ...data,
         work_order_id: data.work_order_id || undefined,
-        shift_id: data.shift_id || undefined,
-        line_id: data.line_id || undefined,
-        buyer_id: data.buyer_id || undefined
+        shift_id: undefined,
+        line_id: undefined,
+        buyer_id: data.buyer_id || undefined,
+        shift: data.shift || undefined,
+        line: data.line || undefined,
+        packaging: data.packaging || undefined
       };
 
       if (id && isEditing) {
-        await updateSession.mutateAsync({ id, data: submitData as ProductionSessionFormData & { work_order_id?: string; shift_id?: string; line_id?: string; buyer_id?: string } });
+        await updateSession.mutateAsync({ id, data: submitData as any });
         navigate(`/daily-instructions/${id}`);
       } else {
-        const result = await createSession.mutateAsync(submitData as unknown as Parameters<typeof createSession.mutateAsync>[0]);
+        const result = await createSession.mutateAsync(submitData as any);
         navigate(`/daily-instructions/${result.id}`);
       }
     } catch (error) {
@@ -84,10 +93,7 @@ export default function DailyInstructionFormPage() {
   return (
     <div className="p-6">
       <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </button>
         <div>
@@ -104,24 +110,7 @@ export default function DailyInstructionFormPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Session Number *
-              </label>
-              <input
-                {...register('session_number')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.session_number ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.session_number && (
-                <p className="mt-1 text-sm text-red-500">{errors.session_number.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Session Date *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Session Date *</label>
               <input
                 type="date"
                 {...register('session_date')}
@@ -129,75 +118,68 @@ export default function DailyInstructionFormPage() {
                   errors.session_date ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
-              {errors.session_date && (
-                <p className="mt-1 text-sm text-red-500">{errors.session_date.message}</p>
-              )}
+              {errors.session_date && <p className="mt-1 text-sm text-red-500">{errors.session_date.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Work Order
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shift *</label>
               <select
-                {...register('work_order_id')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Work Order</option>
-                {workOrders?.map((wo) => (
-                  <option key={wo.id} value={wo.id}>{wo.wo_number} - {wo.batch_code}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Shift
-              </label>
-              <select
-                {...register('shift_id')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                {...register('shift')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.shift ? 'border-red-500' : 'border-gray-300'
+                }`}
               >
                 <option value="">Select Shift</option>
-                {shifts?.map((s) => (
-                  <option key={s.id} value={s.id}>{s.shift_name}</option>
+                {SHIFTS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
+              {errors.shift && <p className="mt-1 text-sm text-red-500">{errors.shift.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Line
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Line *</label>
               <select
-                {...register('line_id')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                {...register('line')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.line ? 'border-red-500' : 'border-gray-300'
+                }`}
               >
                 <option value="">Select Line</option>
-                {lines?.map((l) => (
-                  <option key={l.id} value={l.id}>{l.line_name}</option>
+                {LINES.map((l) => (
+                  <option key={l} value={l}>{l}</option>
                 ))}
               </select>
+              {errors.line && <p className="mt-1 text-sm text-red-500">{errors.line.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Buyer
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Session Number *</label>
+              <input
+                {...register('session_number')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.session_number ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="PBS.DP.DDMMYY.1.A.0001"
+              />
+              {errors.session_number && <p className="mt-1 text-sm text-red-500">{errors.session_number.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Packaging</label>
               <select
-                {...register('buyer_id')}
+                {...register('packaging')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Select Buyer</option>
-                {buyers?.map((b) => (
-                  <option key={b.id} value={b.id}>{b.buyer_name}</option>
+                <option value="">Select Packaging</option>
+                {PACKAGING.map((p) => (
+                  <option key={p} value={p}>{p}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Batch
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
               <input
                 {...register('batch')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -206,26 +188,32 @@ export default function DailyInstructionFormPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target Production *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Production Target (KG) *</label>
               <input
                 type="number"
-                {...register('target_production', { valueAsNumber: true })}
+                step="0.01"
+                {...register('production_target_kg', { valueAsNumber: true })}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.target_production ? 'border-red-500' : 'border-gray-300'
+                  errors.production_target_kg ? 'border-red-500' : 'border-gray-300'
                 }`}
                 min="0"
+                placeholder="Enter target in KG"
               />
-              {errors.target_production && (
-                <p className="mt-1 text-sm text-red-500">{errors.target_production.message}</p>
-              )}
+              {errors.production_target_kg && <p className="mt-1 text-sm text-red-500">{errors.production_target_kg.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Target Production</label>
+              <input
+                type="number"
+                {...register('target_production', { valueAsNumber: true })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
                 {...register('status')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -239,9 +227,7 @@ export default function DailyInstructionFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
               {...register('notes')}
               rows={3}

@@ -49,11 +49,27 @@ export const useDeleteWorkOrder = () => {
   });
 };
 
-export const useGenerateWONumber = () => {
+export const useGenerateWONumber = (buyer: string) => {
   return useQuery({
-    queryKey: ['generateWONumber'],
-    queryFn: workOrderService.workOrderService.generateWONumber,
-    enabled: false
+    queryKey: ['generateWONumber', buyer],
+    queryFn: () => workOrderService.workOrderService.generateWONumber(buyer),
+    enabled: !!buyer
+  });
+};
+
+export const useConfirmWOCompletion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => workOrderService.workOrderService.confirmCompletion(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+    }
+  });
+};
+
+export const useCheckWONotification = () => {
+  return useMutation({
+    mutationFn: (id: string) => workOrderService.workOrderService.checkAndNotifyCompletion(id)
   });
 };
 

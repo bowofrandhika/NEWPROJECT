@@ -3,8 +3,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { workOrderSchema, type WorkOrderFormData } from '../../../schemas';
-import { useWorkOrder, useCreateWorkOrder, useUpdateWorkOrder, useBuyers, useProducts } from '../../../hooks';
+import { useWorkOrder, useCreateWorkOrder, useUpdateWorkOrder } from '../../../hooks';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+
+const BUYERS = ['Belshina', 'Kamatyres', 'SNI'] as const;
+const PACKAGING = ['SW', 'MB', 'LB'] as const;
 
 export default function WorkOrderFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,8 +16,6 @@ export default function WorkOrderFormPage() {
   const navigate = useNavigate();
 
   const { data: workOrder } = useWorkOrder(id!);
-  const { data: buyers } = useBuyers();
-  const { data: products } = useProducts();
   const createWorkOrder = useCreateWorkOrder();
   const updateWorkOrder = useUpdateWorkOrder();
 
@@ -23,19 +24,23 @@ export default function WorkOrderFormPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<WorkOrderFormData>({ resolver: zodResolver(workOrderSchema) as any });
+
+  const watchedBuyer = watch('buyer');
 
   useEffect(() => {
     if (workOrder && isEditing) {
       reset({
         wo_number: workOrder.wo_number,
         wo_date: workOrder.wo_date,
-        buyer_id: workOrder.buyer_id || '',
-        product_id: workOrder.product_id || '',
+        buyer: workOrder.buyer as any || '',
+        deadline_date: workOrder.deadline_date || '',
+        packaging: workOrder.packaging as any || '',
         batch_code: workOrder.batch_code,
         target_qty: workOrder.target_qty,
+        quantity_kg: workOrder.quantity_kg,
         status: workOrder.status,
         priority: workOrder.priority,
         notes: workOrder.notes || '',
@@ -47,29 +52,32 @@ export default function WorkOrderFormPage() {
 
   // Generate WO number for new work orders
   useEffect(() => {
-    if (!id && !isEditing) {
+    if (!id && !isEditing && watchedBuyer) {
       const today = new Date();
-      const year = today.getFullYear();
+      const day = String(today.getDate()).padStart(2, '0');
       const month = String(today.getMonth() + 1).padStart(2, '0');
-      const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-      setValue('wo_number', `WO-${year}${month}-${random}`);
+      const year = String(today.getFullYear()).slice(2);
+      const buyerPrefix = watchedBuyer.slice(0, 3).toUpperCase();
+      setValue('wo_number', `PBS.WO.${day}${month}${year}.${buyerPrefix}.`);
       setValue('wo_date', today.toISOString().split('T')[0]);
     }
-  }, [id, isEditing, setValue]);
+  }, [id, isEditing, watchedBuyer, setValue]);
 
   const onSubmit = async (data: WorkOrderFormData) => {
     try {
       const submitData = {
         ...data,
-        buyer_id: data.buyer_id || undefined,
-        product_id: data.product_id || undefined
+        buyer_id: undefined,
+        product_id: undefined,
+        buyer: data.buyer || undefined,
+        packaging: data.packaging || undefined
       };
 
       if (id && isEditing) {
-        await updateWorkOrder.mutateAsync({ id, data: submitData as unknown as Parameters<typeof updateWorkOrder.mutateAsync>[0]['data'] });
+        await updateWorkOrder.mutateAsync({ id, data: submitData as any });
         navigate(`/work-orders/${id}`);
       } else {
-        const result = await createWorkOrder.mutateAsync(submitData as unknown as Parameters<typeof createWorkOrder.mutateAsync>[0]);
+        const result = await createWorkOrder.mutateAsync(submitData as any);
         navigate(`/work-orders/${result.id}`);
       }
     } catch (error) {
@@ -80,10 +88,7 @@ export default function WorkOrderFormPage() {
   return (
     <div className="p-6">
       <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </button>
         <div>
@@ -100,24 +105,33 @@ export default function WorkOrderFormPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                WO Number *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Buyer *</label>
+              <select
+                {...register('buyer')}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Buyer</option>
+                {BUYERS.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+              {errors.buyer && <p className="mt-1 text-sm text-red-500">{errors.buyer.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">WO Number *</label>
               <input
                 {...register('wo_number')}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                   errors.wo_number ? 'border-red-500' : 'border-gray-300'
                 }`}
+                placeholder="PBS.WO.DDMMYY.BUY.0001"
               />
-              {errors.wo_number && (
-                <p className="mt-1 text-sm text-red-500">{errors.wo_number.message}</p>
-              )}
+              {errors.wo_number && <p className="mt-1 text-sm text-red-500">{errors.wo_number.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                WO Date *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">WO Date *</label>
               <input
                 type="date"
                 {...register('wo_date')}
@@ -125,45 +139,52 @@ export default function WorkOrderFormPage() {
                   errors.wo_date ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
-              {errors.wo_date && (
-                <p className="mt-1 text-sm text-red-500">{errors.wo_date.message}</p>
-              )}
+              {errors.wo_date && <p className="mt-1 text-sm text-red-500">{errors.wo_date.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Buyer
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline *</label>
+              <input
+                type="date"
+                {...register('deadline_date')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.deadline_date ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.deadline_date && <p className="mt-1 text-sm text-red-500">{errors.deadline_date.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Packaging *</label>
               <select
-                {...register('buyer_id')}
+                {...register('packaging')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Select Buyer</option>
-                {buyers?.map((b) => (
-                  <option key={b.id} value={b.id}>{b.buyer_name}</option>
+                <option value="">Select Packaging</option>
+                {PACKAGING.map((p) => (
+                  <option key={p} value={p}>{p}</option>
                 ))}
               </select>
+              {errors.packaging && <p className="mt-1 text-sm text-red-500">{errors.packaging.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product
-              </label>
-              <select
-                {...register('product_id')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Product</option>
-                {products?.map((p) => (
-                  <option key={p.id} value={p.id}>{p.product_name}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity (KG) *</label>
+              <input
+                type="number"
+                step="0.01"
+                {...register('quantity_kg', { valueAsNumber: true })}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.quantity_kg ? 'border-red-500' : 'border-gray-300'
+                }`}
+                min="0"
+                placeholder="Enter quantity in KG"
+              />
+              {errors.quantity_kg && <p className="mt-1 text-sm text-red-500">{errors.quantity_kg.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Batch Code *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Batch Code *</label>
               <input
                 {...register('batch_code')}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
@@ -171,32 +192,21 @@ export default function WorkOrderFormPage() {
                 }`}
                 placeholder="e.g., BATCH-2024-001"
               />
-              {errors.batch_code && (
-                <p className="mt-1 text-sm text-red-500">{errors.batch_code.message}</p>
-              )}
+              {errors.batch_code && <p className="mt-1 text-sm text-red-500">{errors.batch_code.message}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target Quantity *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Target Quantity</label>
               <input
                 type="number"
                 {...register('target_qty', { valueAsNumber: true })}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.target_qty ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 min="0"
               />
-              {errors.target_qty && (
-                <p className="mt-1 text-sm text-red-500">{errors.target_qty.message}</p>
-              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Priority (1-10)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority (1-10)</label>
               <input
                 type="number"
                 {...register('priority', { valueAsNumber: true })}
@@ -207,9 +217,7 @@ export default function WorkOrderFormPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
                 {...register('status')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -220,34 +228,10 @@ export default function WorkOrderFormPage() {
                 <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Planned Start Date
-              </label>
-              <input
-                type="date"
-                {...register('planned_start_date')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Planned End Date
-              </label>
-              <input
-                type="date"
-                {...register('planned_end_date')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
               {...register('notes')}
               rows={3}

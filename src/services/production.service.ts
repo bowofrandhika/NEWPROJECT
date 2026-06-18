@@ -65,15 +65,18 @@ export const workOrderService = {
     if (error) throw error;
   },
 
-  async generateWONumber(): Promise<string> {
+  async generateWONumber(buyer: string): Promise<string> {
     const today = new Date();
-    const year = today.getFullYear();
+    const day = String(today.getDate()).padStart(2, '0');
     const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = String(today.getFullYear()).slice(2);
+    const buyerPrefix = buyer ? buyer.slice(0, 3).toUpperCase() : 'XXX';
 
+    const pattern = `PBS.WO.${day}${month}${year}.${buyerPrefix}.%`;
     const { data, error } = await supabase
       .from('work_orders')
       .select('wo_number')
-      .like('wo_number', `WO-${year}${month}-%`)
+      .like('wo_number', pattern)
       .order('wo_number', { ascending: false })
       .limit(1);
 
@@ -82,11 +85,40 @@ export const workOrderService = {
     let sequence = 1;
     if (data && data.length > 0) {
       const lastNumber = data[0].wo_number;
-      const lastSeq = parseInt(lastNumber.split('-')[2] || '0');
+      const parts = lastNumber.split('.');
+      const lastSeq = parseInt(parts[parts.length - 1] || '0');
       sequence = lastSeq + 1;
     }
 
-    return `WO-${year}${month}-${String(sequence).padStart(4, '0')}`;
+    return `PBS.WO.${day}${month}${year}.${buyerPrefix}.${String(sequence).padStart(4, '0')}`;
+  },
+
+  async confirmCompletion(id: string): Promise<WorkOrder> {
+    return this.update(id, { wo_completion_confirmed: true, status: 'COMPLETED' });
+  },
+
+  async checkAndNotifyCompletion(id: string): Promise<void> {
+    const { data: wo } = await supabase
+      .from('work_orders')
+      .select('quantity_kg, completed_kg, notification_sent, wo_completion_confirmed')
+      .eq('id', id)
+      .single();
+
+    if (!wo || wo.notification_sent || wo.wo_completion_confirmed) return;
+
+    if (wo.completed_kg >= wo.quantity_kg) {
+      await supabase
+        .from('work_orders')
+        .update({ notification_sent: true })
+        .eq('id', id);
+
+      await supabase
+        .from('wo_completion_notifications')
+        .insert({
+          work_order_id: id,
+          message: `Work Order has reached the target quantity. Completion confirmation required.`
+        });
+    }
   }
 };
 
@@ -157,16 +189,19 @@ export const productionSessionService = {
     if (error) throw error;
   },
 
-  async generateSessionNumber(): Promise<string> {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
+  async generateSessionNumber(sessionDate: string, shift: string, line: string): Promise<string> {
+    const date = new Date(sessionDate);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(2);
+    const shiftNum = shift === 'Morning' ? '1' : shift === 'Afternoon' ? '2' : '1';
+    const lineCode = line || 'A';
 
+    const pattern = `PBS.DP.${day}${month}${year}.${shiftNum}.${lineCode}.%`;
     const { data, error } = await supabase
       .from('production_sessions')
       .select('session_number')
-      .like('session_number', `PS-${year}${month}${day}-%`)
+      .like('session_number', pattern)
       .order('session_number', { ascending: false })
       .limit(1);
 
@@ -175,11 +210,12 @@ export const productionSessionService = {
     let sequence = 1;
     if (data && data.length > 0) {
       const lastNumber = data[0].session_number;
-      const lastSeq = parseInt(lastNumber.split('-')[2] || '0');
+      const parts = lastNumber.split('.');
+      const lastSeq = parseInt(parts[parts.length - 1] || '0');
       sequence = lastSeq + 1;
     }
 
-    return `PS-${year}${month}${day}-${String(sequence).padStart(3, '0')}`;
+    return `PBS.DP.${day}${month}${year}.${shiftNum}.${lineCode}.${String(sequence).padStart(4, '0')}`;
   },
 
   async activate(id: string): Promise<ProductionSession> {

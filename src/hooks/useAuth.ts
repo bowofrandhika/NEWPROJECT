@@ -142,6 +142,7 @@ export const useAuth = () => {
     clearError: store.clearError,
     hasRole: (role: string) => {
       const roleHierarchy: Record<string, number> = {
+        'SUPER_USER': 10,
         'ADMIN': 5,
         'SPV': 4,
         'MANDOR': 3,
@@ -151,6 +152,22 @@ export const useAuth = () => {
       const userRole = store.appUser?.role;
       if (!userRole) return false;
       return (roleHierarchy[userRole] || 0) >= (roleHierarchy[role] || 0);
+    },
+    isSuperUser: () => store.appUser?.role === 'SUPER_USER',
+    canAccess: (feature: string) => {
+      const userRole = store.appUser?.role;
+      if (!userRole) return false;
+      if (userRole === 'SUPER_USER') return true;
+
+      const featureAccess: Record<string, string[]> = {
+        'production': ['SUPER_USER', 'ADMIN', 'SPV', 'MANDOR', 'DRYER_OPERATOR', 'PACKING_OPERATOR'],
+        'issues': ['SUPER_USER', 'ADMIN', 'SPV', 'MANDOR'],
+        'reports': ['SUPER_USER', 'ADMIN', 'SPV'],
+        'admin': ['SUPER_USER', 'ADMIN'],
+        'users': ['SUPER_USER'],
+        'master_data': ['SUPER_USER', 'ADMIN']
+      };
+      return featureAccess[feature]?.includes(userRole) || false;
     }
   };
 };

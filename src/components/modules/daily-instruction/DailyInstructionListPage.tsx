@@ -1,22 +1,25 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProductionSessions, useDeleteProductionSession, useActivateSession, useCompleteSession } from '../../../hooks';
-import { Plus, Search, Filter, Play, CheckCircle, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Play, CheckCircle, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
 import { formatDate, getStatusColor } from '../../../lib/utils';
 
 export default function DailyInstructionListPage() {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [dateFilter, setDateFilter] = useState<string>('');
   const { data: sessions, isLoading } = useProductionSessions({
-    status: statusFilter || undefined,
     date: dateFilter || undefined
   });
   const deleteSession = useDeleteProductionSession();
   const activateSession = useActivateSession();
   const completeSession = useCompleteSession();
 
-  const filteredSessions = sessions?.filter(session =>
+  const activeSessions = sessions?.filter(s => s.status === 'ACTIVE' || s.status === 'DRAFT');
+  const completedSessions = sessions?.filter(s => s.status === 'COMPLETED' || s.status === 'CANCELLED');
+  const currentSessions = activeTab === 'active' ? activeSessions : completedSessions;
+
+  const filteredSessions = currentSessions?.filter(session =>
     search
       ? session.session_number.toLowerCase().includes(search.toLowerCase()) ||
         (session.batch && session.batch.toLowerCase().includes(search.toLowerCase()))
@@ -57,6 +60,26 @@ export default function DailyInstructionListPage() {
         </Link>
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-1">
+        <button
+          onClick={() => setActiveTab('active')}
+          className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            activeTab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          Active ({activeSessions?.length || 0})
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            activeTab === 'completed' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          Completed ({completedSessions?.length || 0})
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -76,20 +99,6 @@ export default function DailyInstructionListPage() {
             onChange={(e) => setDateFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="DRAFT">Draft</option>
-              <option value="ACTIVE">Active</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -127,16 +136,24 @@ export default function DailyInstructionListPage() {
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
                 <div className="flex justify-between">
-                  <span>Batch:</span>
-                  <span className="font-medium">{session.batch || '-'}</span>
+                  <span>Shift:</span>
+                  <span className="font-medium">{session.shift || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Line:</span>
+                  <span className="font-medium">{session.line || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Packaging:</span>
+                  <span className="font-medium">{session.packaging || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Target:</span>
-                  <span className="font-medium">{session.target_production.toLocaleString()}</span>
+                  <span className="font-medium">{session.production_target_kg.toLocaleString()} KG</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Actual:</span>
-                  <span className="font-medium text-green-600">{session.actual_production.toLocaleString()}</span>
+                  <span className="font-medium text-green-600">{session.actual_production_kg.toLocaleString()} KG</span>
                 </div>
               </div>
 
@@ -144,7 +161,7 @@ export default function DailyInstructionListPage() {
                 <div
                   className="bg-green-500 h-2 rounded-full"
                   style={{
-                    width: `${Math.min((session.actual_production / session.target_production) * 100 || 0, 100)}%`
+                    width: `${session.production_target_kg > 0 ? Math.min((session.actual_production_kg / session.production_target_kg) * 100, 100) : 0}%`
                   }}
                 ></div>
               </div>

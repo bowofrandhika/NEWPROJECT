@@ -1,288 +1,269 @@
 import { useParams, Link } from 'react-router-dom';
-import {
-  usePreProductionChecklist, useCreatePreProductionChecklist, useApprovePreProductionChecklist,
-  useChecklistItems, useCheckChecklistItem, useToolsInspections,
-  useManpowerRecords, useCreateManpowerRecord, useProductionSession
-} from '../../../hooks';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { manpowerRecordSchema, type ManpowerRecordFormData } from '../../../schemas';
-import { ArrowLeft, Check, Plus, X } from 'lucide-react';
-import { formatDateTime, getStatusColor } from '../../../lib/utils';
+import { useProductionSessions, useProductionSession, useSessionChecklistItems, useCreateSessionChecklistItems, useUpdateSessionChecklistItem } from '../../../hooks';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Save, CheckCircle, AlertCircle } from 'lucide-react';
+
+const CHECKLIST_ITEMS = [
+  'Shredder Cleanliness',
+  'Magnet Trap',
+  'Filling Station',
+  'Dryer Condition',
+  'Bench Scale',
+  'Press Machine',
+  'Metal Detector',
+  'Work Area',
+  'Work Tools',
+  'Supporting Supplies'
+];
 
 export default function PreProductionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const { data: session } = useProductionSession(sessionId!);
-  const { data: checklist } = usePreProductionChecklist(sessionId!);
-  const { data: checklistItems } = useChecklistItems(checklist?.id || '');
-  const { data: toolsInspections } = useToolsInspections(sessionId!);
-  const { data: manpowerRecords } = useManpowerRecords(sessionId!);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>(sessionId || '');
+  const [activePhase, setActivePhase] = useState<'initial' | 'final'>('initial');
+  const [items, setItems] = useState<Record<string, { initial_condition?: 'OK' | 'NG'; final_condition?: 'OK' | 'NG'; initial_remarks?: string; final_remarks?: string }>>({});
 
-  const createChecklist = useCreatePreProductionChecklist();
-  const approveChecklist = useApprovePreProductionChecklist();
-  const checkItem = useCheckChecklistItem();
-  const createManpowerRecord = useCreateManpowerRecord();
+  const { data: allSessions } = useProductionSessions({ status: 'ACTIVE' });
+  const { data: session } = useProductionSession(selectedSessionId || '');
+  const { data: checklistItems, isLoading: itemsLoading } = useSessionChecklistItems(selectedSessionId || '');
+  const createItems = useCreateSessionChecklistItems();
+  const updateItem = useUpdateSessionChecklistItem();
 
-  const [showManpowerForm, setShowManpowerForm] = useState(false);
+  // Initialize checklist items when session is selected
+  useEffect(() => {
+    if (selectedSessionId && checklistItems && checklistItems.length === 0) {
+      const newItems = CHECKLIST_ITEMS.map((name, index) => ({
+        production_session_id: selectedSessionId,
+        item_name: name,
+        sort_order: index
+      }));
+      createItems.mutate(newItems);
+    }
+  }, [selectedSessionId, checklistItems]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ManpowerRecordFormData>({ resolver: zodResolver(manpowerRecordSchema) as any });
-
-  const handleCreateChecklist = async () => {
-    if (sessionId) {
-      await createChecklist.mutateAsync({
-        production_session_id: sessionId,
-        checklist_date: new Date().toISOString().split('T')[0],
-        status: 'PENDING'
+  // Update local state when items are loaded
+  useEffect(() => {
+    if (checklistItems) {
+      const state: Record<string, any> = {};
+      checklistItems.forEach(item => {
+        state[item.id] = {
+          initial_condition: item.initial_condition,
+          final_condition: item.final_condition,
+          initial_remarks: item.initial_remarks || '',
+          final_remarks: item.final_remarks || ''
+        };
       });
+      setItems(state);
     }
+  }, [checklistItems]);
+
+  const handleConditionChange = (itemId: string, condition: 'OK' | 'NG') => {
+    setItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [activePhase === 'initial' ? 'initial_condition' : 'final_condition']: condition
+      }
+    }));
   };
 
-  const handleCheckItem = async (itemId: string, isChecked: boolean) => {
-    await checkItem.mutateAsync({ id: itemId, isChecked });
+  const handleRemarksChange = (itemId: string, remarks: string) => {
+    setItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [activePhase === 'initial' ? 'initial_remarks' : 'final_remarks']: remarks
+      }
+    }));
   };
 
-  const handleApprove = async () => {
-    if (checklist && window.confirm('Approve this checklist?')) {
-      await approveChecklist.mutateAsync(checklist.id);
+  const handleSaveItem = async (itemId: string) => {
+    const data = items[itemId];
+    if (!data) return;
+
+    const updateData: Record<string, any> = {};
+    if (activePhase === 'initial') {
+      updateData.initial_condition = data.initial_condition;
+      updateData.initial_remarks = data.initial_remarks;
+    } else {
+      updateData.final_condition = data.final_condition;
+      updateData.final_remarks = data.final_remarks;
     }
+
+    await updateItem.mutateAsync({ id: itemId, data: updateData });
   };
 
-  const onManpowerSubmit = async (data: ManpowerRecordFormData) => {
-    await createManpowerRecord.mutateAsync({
-      ...data,
-      production_session_id: sessionId!
-    });
-    reset();
-    setShowManpowerForm(false);
-  };
+  const renderSessionSelector = () => (
+    <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Production Session</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {allSessions?.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSelectedSessionId(s.id)}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              selectedSessionId === s.id
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <p className="font-medium text-gray-900">{s.session_number}</p>
+            <p className="text-sm text-gray-500">{s.session_date} - {s.shift || '-'} - {s.line || '-'}</p>
+            <p className="text-sm text-gray-500">Batch: {s.batch || '-'}</p>
+          </button>
+        ))}
+      </div>
+      {allSessions?.length === 0 && (
+        <p className="text-gray-500 text-center py-4">No active sessions available. Create a session first.</p>
+      )}
+    </div>
+  );
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link to={`/daily-instructions/${sessionId}`} className="p-2 hover:bg-gray-100 rounded-lg">
+          <Link to="/daily-instructions" className="p-2 hover:bg-gray-100 rounded-lg">
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Module A - Pre-Production</h1>
-            <p className="text-gray-500 text-sm">{session?.session_number || 'Loading...'}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Pre-Production Checklist</h1>
+            <p className="text-gray-500 text-sm">{session?.session_number || 'Select a session'}</p>
           </div>
         </div>
-        {checklist && checklist.status === 'PENDING' && (
-          <button
-            onClick={handleApprove}
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            <Check className="w-4 h-4 mr-2" />
-            Approve Checklist
-          </button>
-        )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 mb-6">
-        <TabButton active>Checklist</TabButton>
-        <TabButton>Tools Inspection</TabButton>
-        <TabButton active>Manpower</TabButton>
-      </div>
+      {/* Session Selector */}
+      {!sessionId && renderSessionSelector()}
 
-      {/* Checklist Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Pre-Production Checklist</h2>
-            {checklist && (
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(checklist.status)}`}>
-                {checklist.status}
-              </span>
-            )}
-          </div>
-
-          {!checklist ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No checklist created for this session</p>
-              <button
-                onClick={handleCreateChecklist}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Checklist
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {checklistItems && checklistItems.length > 0 ? (
-                checklistItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      item.is_checked ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => handleCheckItem(item.id, !item.is_checked)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          item.is_checked ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                        }`}
-                      >
-                        {item.is_checked && <Check className="w-4 h-4 text-white" />}
-                      </button>
-                      <span className={item.is_checked ? 'line-through text-gray-500' : 'text-gray-900'}>
-                        {item.item_name}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-400">{item.category}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">No checklist items</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Tools Inspection */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Tools Inspection</h2>
-          <div className="space-y-2">
-            {toolsInspections && toolsInspections.length > 0 ? (
-              toolsInspections.map((tool) => (
-                <div key={tool.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{tool.tool_name}</p>
-                    <p className="text-xs text-gray-500">{tool.tool_code}</p>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    tool.condition_status === 'GOOD' ? 'bg-green-100 text-green-800' :
-                    tool.condition_status === 'NEEDS_REPAIR' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {tool.condition_status}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 text-center py-4">No tools inspected</p>
-            )}
-          </div>
-        </div>
-
-        {/* Manpower */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Manpower & Attendance</h2>
+      {selectedSessionId && (
+        <>
+          {/* Phase Tabs */}
+          <div className="flex items-center gap-2 mb-6">
             <button
-              onClick={() => setShowManpowerForm(!showManpowerForm)}
-              className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+              onClick={() => setActivePhase('initial')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activePhase === 'initial'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              {showManpowerForm ? <X className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
-              {showManpowerForm ? 'Cancel' : 'Add Person'}
+              Initial Condition (Before Production)
+            </button>
+            <button
+              onClick={() => setActivePhase('final')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activePhase === 'final'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Final Condition (After Production)
             </button>
           </div>
 
-          {showManpowerForm && (
-            <form onSubmit={handleSubmit(onManpowerSubmit)} className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <input
-                    {...register('operator_name')}
-                    placeholder="Operator Name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                  {errors.operator_name && (
-                    <p className="text-xs text-red-500 mt-1">{errors.operator_name.message}</p>
-                  )}
-                </div>
-                <div>
-                  <input
-                    {...register('position')}
-                    placeholder="Position"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <select
-                    {...register('attendance_status')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="PRESENT">Present</option>
-                    <option value="ABSENT">Absent</option>
-                    <option value="LATE">Late</option>
-                    <option value="LEAVE">Leave</option>
-                    <option value="SICK">Sick</option>
-                  </select>
-                </div>
-                <div>
-                  <button
-                    type="submit"
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
-                    Add
-                  </button>
-                </div>
+          {/* Checklist Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {activePhase === 'initial' ? 'Initial Conditions' : 'Final Conditions'}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {activePhase === 'initial'
+                  ? 'Fill in before the production session begins'
+                  : 'Fill in after the production session ends'}
+              </p>
+            </div>
+            {itemsLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               </div>
-            </form>
-          )}
-
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-2 text-sm font-medium text-gray-500">Name</th>
-                <th className="text-left py-2 text-sm font-medium text-gray-500">Position</th>
-                <th className="text-left py-2 text-sm font-medium text-gray-500">Status</th>
-                <th className="text-left py-2 text-sm font-medium text-gray-500">Clock In</th>
-                <th className="text-left py-2 text-sm font-medium text-gray-500">Clock Out</th>
-              </tr>
-            </thead>
-            <tbody>
-              {manpowerRecords && manpowerRecords.length > 0 ? (
-                manpowerRecords.map((mp) => (
-                  <tr key={mp.id} className="border-b border-gray-100">
-                    <td className="py-2 text-sm text-gray-900">{mp.operator_name}</td>
-                    <td className="py-2 text-sm text-gray-500">{mp.position}</td>
-                    <td className="py-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        mp.attendance_status === 'PRESENT' ? 'bg-green-100 text-green-800' :
-                        mp.attendance_status === 'ABSENT' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {mp.attendance_status}
-                      </span>
-                    </td>
-                    <td className="py-2 text-sm text-gray-500">
-                      {mp.clock_in_time ? formatDateTime(mp.clock_in_time) : '-'}
-                    </td>
-                    <td className="py-2 text-sm text-gray-500">
-                      {mp.clock_out_time ? formatDateTime(mp.clock_out_time) : '-'}
-                    </td>
+            ) : (
+              <table className="min-w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remarks</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-500">
-                    No manpower records
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {checklistItems?.map((item) => {
+                    const currentCondition = activePhase === 'initial'
+                      ? items[item.id]?.initial_condition
+                      : items[item.id]?.final_condition;
+                    const currentRemarks = activePhase === 'initial'
+                      ? items[item.id]?.initial_remarks
+                      : items[item.id]?.final_remarks;
+                    const isNG = currentCondition === 'NG';
+                    const needsRemarks = isNG && (!currentRemarks || currentRemarks.trim() === '');
 
-function TabButton({ children, active }: { children: React.ReactNode; active?: boolean }) {
-  return (
-    <button
-      className={`px-4 py-2 text-sm font-medium rounded-lg ${
-        active ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
-      }`}
-    >
-      {children}
-    </button>
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                          {item.item_name}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleConditionChange(item.id, 'OK')}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                currentCondition === 'OK'
+                                  ? 'bg-green-100 text-green-700 border border-green-300'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              OK
+                            </button>
+                            <button
+                              onClick={() => handleConditionChange(item.id, 'NG')}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                currentCondition === 'NG'
+                                  ? 'bg-red-100 text-red-700 border border-red-300'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                            >
+                              <AlertCircle className="w-4 h-4" />
+                              NG
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="text"
+                            value={currentRemarks || ''}
+                            onChange={(e) => handleRemarksChange(item.id, e.target.value)}
+                            placeholder={isNG ? 'Required for NG' : 'Optional'}
+                            className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                              needsRemarks
+                                ? 'border-red-300 bg-red-50'
+                                : 'border-gray-300'
+                            }`}
+                          />
+                          {needsRemarks && (
+                            <p className="text-xs text-red-500 mt-1">Remarks required when condition is NG</p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => handleSaveItem(item.id)}
+                            disabled={needsRemarks}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Save className="w-3 h-3" />
+                            Save
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
