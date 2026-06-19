@@ -49,16 +49,15 @@ export default function SignupPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('User creation failed');
 
-      // Create app_users record (RLS allows self-insert)
-      const { error: appError } = await supabase
-        .from('app_users')
-        .insert({
-          user_id: authData.user.id,
-          username: data.username,
-          full_name: data.full_name,
-          email: data.email,
-          role: 'SUPER_USER'
-        });
+      // Create app_users profile via SECURITY DEFINER function (bypasses RLS,
+      // works even when the session isn't fully established right after signUp)
+      const { error: appError } = await supabase.rpc('create_own_profile', {
+        p_user_id: authData.user.id,
+        p_username: data.username,
+        p_full_name: data.full_name,
+        p_email: data.email,
+        p_role: 'SUPER_USER'
+      });
 
       if (appError) {
         if (appError.code === '23505') {

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '../../schemas';
 import { useAuth } from '../../hooks';
-import { Factory, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Factory, User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
-      await login(data.email, data.password);
+      await login(data.username, data.password);
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
@@ -42,34 +42,32 @@ export default function LoginPage() {
             <p className="text-gray-500 mt-2">Sign in to your account</p>
           </div>
 
-          {/* Error Alert */}
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 
-          {/* Login Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
+                Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  {...register('email')}
-                  type="email"
+                  {...register('username')}
+                  type="text"
                   className={`block w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.email ? 'border-red-500' : 'border-gray-300'
+                    errors.username ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Enter your email"
+                  placeholder="Enter your username"
                 />
               </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-500">{errors.username.message}</p>
               )}
             </div>
 

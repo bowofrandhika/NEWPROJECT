@@ -54,7 +54,19 @@ export const authService = {
     return { user: authData.user, appUser };
   },
 
-  async signIn(email: string, password: string) {
+  async signIn(identifier: string, password: string) {
+    const isEmail = identifier.includes('@');
+    let email = identifier;
+
+    if (!isEmail) {
+      const { data: emailResult, error: lookupError } = await supabase
+        .rpc('get_email_by_username', { p_username: identifier });
+
+      if (lookupError) throw lookupError;
+      if (!emailResult) throw new Error('Username not found');
+      email = emailResult as string;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
