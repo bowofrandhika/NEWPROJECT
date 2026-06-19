@@ -41,7 +41,7 @@ export default function SignupPage() {
         .limit(1);
 
       const isFirstUser = !existingUsers || existingUsers.length === 0;
-      const role = isFirstUser ? 'SPV' : 'DRYER_OPERATOR';
+      const role = isFirstUser ? 'SUPER_USER' : 'DRYER_OPERATOR';
 
       // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
