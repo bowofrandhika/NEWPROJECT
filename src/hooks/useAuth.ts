@@ -117,9 +117,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'pms-auth',
+      // Only persist the auth indicator; appUser is always re-fetched on mount
+      // via checkAuth so stale/null role data never blocks the nav menu.
       partialize: (state) => ({
-        user: state.user,
-        appUser: state.appUser,
         isAuthenticated: state.isAuthenticated
       })
     }

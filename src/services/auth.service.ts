@@ -80,14 +80,14 @@ export const authService = {
       .eq('user_id', data.user.id)
       .maybeSingle();
 
-    // Log login audit
+    // Log login audit (non-critical, ignore errors)
     if (data.user) {
-      await supabase.from('audit_logs').insert({
+      supabase.from('audit_logs').insert({
         user_id: data.user.id,
         table_name: 'auth',
         action: 'LOGIN',
         new_values: { email }
-      });
+      }).then(() => {/* ignore */});
     }
 
     return { session: data.session, user: data.user, appUser };

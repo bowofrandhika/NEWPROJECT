@@ -1,10 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from './hooks/useAuth';
-import { supabase } from './lib/supabase';
 
-// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -14,7 +12,6 @@ const queryClient = new QueryClient({
   }
 });
 
-// Import all components
 import * as LoginPages from './components/auth';
 import * as Layout from './components/layout';
 import * as Dashboard from './components/dashboard';
@@ -31,22 +28,16 @@ import * as Maintenance from './components/modules/maintenance';
 import * as Quality from './components/modules/quality';
 import * as Traceability from './components/modules/traceability';
 import * as Reports from './components/modules/reports';
-import * as UserManagement from './components/modules/admin';
-import * as MasterData from './components/modules/admin';
-import * as Audit from './components/modules/admin';
+import * as Admin from './components/modules/admin';
 
-// Protected Route wrapper
 function ProtectedRoute() {
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLoading = useAuthStore((s) => s.isLoading);
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
   }
@@ -69,54 +60,26 @@ function AppRoutes() {
         <Route element={<Layout.MainLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard.DashboardPage />} />
-
-          {/* Work Orders */}
           <Route path="work-orders" element={<WorkOrder.WorkOrderListPage />} />
           <Route path="work-orders/:id" element={<WorkOrder.WorkOrderDetailPage />} />
           <Route path="work-orders/new" element={<WorkOrder.WorkOrderFormPage />} />
-
-          {/* Production Sessions (Daily Instructions) */}
           <Route path="daily-instructions" element={<DailyInstruction.DailyInstructionListPage />} />
           <Route path="daily-instructions/:id" element={<DailyInstruction.DailyInstructionDetailPage />} />
           <Route path="daily-instructions/new" element={<DailyInstruction.DailyInstructionFormPage />} />
-
-          {/* Module A - Pre Production */}
           <Route path="pre-production/:sessionId" element={<ModuleA.PreProductionPage />} />
-
-          {/* Module B - Production Process */}
           <Route path="production/:sessionId" element={<ModuleB.ProductionProcessPage />} />
-
-          {/* Module C - Dryer Monitoring */}
           <Route path="dryer/:sessionId" element={<ModuleC.DryerMonitoringPage />} />
-
-          {/* Module D - Packing */}
           <Route path="packing/:sessionId" element={<ModuleD.PackingPage />} />
-
-          {/* Module E - Bottleneck */}
           <Route path="bottleneck/:sessionId" element={<ModuleE.BottleneckPage />} />
-
-          {/* Module F - Downtime */}
           <Route path="downtime/:sessionId" element={<ModuleF.DowntimePage />} />
-
-          {/* Reports */}
           <Route path="reports" element={<Reports.ReportsPage />} />
-
-          {/* OEE Dashboard */}
           <Route path="oee" element={<OEE.OEEDashboardPage />} />
-
-          {/* Traceability */}
           <Route path="traceability" element={<Traceability.TraceabilityPage />} />
-
-          {/* Maintenance */}
           <Route path="maintenance" element={<Maintenance.MaintenancePage />} />
-
-          {/* Quality */}
           <Route path="quality" element={<Quality.QualityPage />} />
-
-          {/* Admin */}
-          <Route path="admin/users" element={<UserManagement.UserListPage />} />
-          <Route path="admin/master" element={<MasterData.MasterDataPage />} />
-          <Route path="admin/audit" element={<Audit.AuditLogPage />} />
+          <Route path="admin/users" element={<Admin.UserListPage />} />
+          <Route path="admin/master" element={<Admin.MasterDataPage />} />
+          <Route path="admin/audit" element={<Admin.AuditLogPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -125,23 +88,22 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const checkAuth = useAuthStore((s) => s.checkAuth);
   const [initialized, setInitialized] = useState(false);
+  // Use a ref so the effect only runs once regardless of checkAuth reference changes
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    // Initialize auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      setInitialized(true);
-    });
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    checkAuth().finally(() => setInitialized(true));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
   }
