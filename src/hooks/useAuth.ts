@@ -157,15 +157,15 @@ export const useAuth = () => {
     canAccess: (feature: string) => {
       const userRole = store.appUser?.role;
       if (!userRole) return false;
-      if (userRole === 'SUPER_USER') return true;
+      if (userRole === 'SUPER_USER' || userRole === 'SPV') return true;
 
       const featureAccess: Record<string, string[]> = {
-        'production': ['SUPER_USER', 'ADMIN', 'SPV', 'MANDOR', 'DRYER_OPERATOR', 'PACKING_OPERATOR'],
-        'issues': ['SUPER_USER', 'ADMIN', 'SPV', 'MANDOR'],
-        'reports': ['SUPER_USER', 'ADMIN', 'SPV'],
-        'admin': ['SUPER_USER', 'ADMIN'],
-        'users': ['SUPER_USER'],
-        'master_data': ['SUPER_USER', 'ADMIN']
+        'production': ['ADMIN', 'MANDOR', 'DRYER_OPERATOR', 'PACKING_OPERATOR'],
+        'issues': ['ADMIN', 'MANDOR'],
+        'reports': ['ADMIN'],
+        'admin': [],
+        'users': [],
+        'master_data': []
       };
       return featureAccess[feature]?.includes(userRole) || false;
     }

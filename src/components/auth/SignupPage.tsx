@@ -34,15 +34,6 @@ export default function SignupPage() {
     setError(null);
 
     try {
-      // Check if any users exist
-      const { data: existingUsers } = await supabase
-        .from('app_users')
-        .select('id')
-        .limit(1);
-
-      const isFirstUser = !existingUsers || existingUsers.length === 0;
-      const role = isFirstUser ? 'SUPER_USER' : 'DRYER_OPERATOR';
-
       // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -58,10 +49,7 @@ export default function SignupPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('User creation failed');
 
-      // Wait a moment for the auth user to be created
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Create app_users record
+      // Create app_users record (RLS allows self-insert)
       const { error: appError } = await supabase
         .from('app_users')
         .insert({
@@ -69,12 +57,10 @@ export default function SignupPage() {
           username: data.username,
           full_name: data.full_name,
           email: data.email,
-          role: role
+          role: 'SUPER_USER'
         });
 
       if (appError) {
-        console.error('App user creation error:', appError);
-        // If this is a duplicate username error
         if (appError.code === '23505') {
           throw new Error('Username already exists');
         }
