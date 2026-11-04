@@ -64,6 +64,12 @@ run_windows.bat
 
 Skrip tersebut membuat virtual environment, memasang dependensi, lalu menjalankan aplikasi.
 
+### Linux / macOS (pengembangan)
+
+```bash
+./run.sh
+```
+
 ### Manual (Windows / Linux / macOS)
 
 ```bash
@@ -99,6 +105,21 @@ Bisa diubah lewat `--db` atau variabel lingkungan `SMARTFILE_DATA_DIR`.
 
 ---
 
+## Melihat tampilan tanpa menjalankan aplikasi
+
+Repo ini menyertakan galeri HTML berisi render offscreen dari aplikasi asli
+(dark & light, 9 halaman):
+
+```bash
+python scripts/build_gallery.py          # memperbarui gambar dari kode terbaru
+python -m http.server 8000 -d docs/gallery
+```
+
+Buka `http://localhost:8000`. Galeri hanya untuk melihat tampilan — aplikasi aslinya
+tetap program desktop PySide6, bukan aplikasi web.
+
+---
+
 ## Alur pemakaian V1.0
 
 1. Buka **Settings** (atau **File Scanner**) dan tambahkan **folder sumber**.
@@ -125,6 +146,7 @@ NEWPROJECT/
 ├── requirements.txt             # dependensi runtime
 ├── requirements-dev.txt         # + PyInstaller & ruff
 ├── run_windows.bat              # jalankan dari source (Windows)
+├── run.sh                       # jalankan dari source (Linux/macOS)
 ├── assets/
 │   ├── icon.png                 # ikon aplikasi
 │   └── icon.ico                 # ikon untuk EXE
@@ -145,12 +167,14 @@ NEWPROJECT/
 ├── scripts/
 │   ├── generate_icon.py         # membuat assets/icon.png & .ico
 │   ├── preview_screenshots.py   # data demo + tangkapan layar dokumentasi
+│   ├── build_gallery.py         # galeri HTML (docs/gallery) dari render offscreen
 │   └── build_windows.ps1        # build EXE (onedir/onefile)
 ├── tests/
 │   ├── test_core.py             # database, klasifikasi, organizer, utils
 │   └── test_ui_smoke.py         # semua halaman, tema, pencarian, pemindaian
 ├── docs/
 │   ├── ARCHITECTURE.md          # detail arsitektur & titik ekstensi
+│   ├── gallery/                 # galeri HTML (9 halaman × 2 tema)
 │   └── screenshots/             # gambar dokumentasi
 └── README.md
 ```
