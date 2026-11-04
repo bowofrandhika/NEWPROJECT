@@ -1,2 +1,33 @@
-node_modules/
-.env
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Build output (PyInstaller)
+build/
+dist/
+*.manifest
+
+# Database lokal & data aplikasi
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+data/
+logs/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

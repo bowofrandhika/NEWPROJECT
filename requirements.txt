@@ -1,0 +1,18 @@
+# SmartFile Organizer — dependensi runtime V1.0
+#
+# PySide6 6.8 adalah rilis LTS dan direkomendasikan untuk build EXE Windows.
+# PySide6 6.12.0 memiliki bug refcount pada QTableWidget di sebagian lingkungan;
+# karena itu versi dibatasi di bawah 6.10.
+PySide6>=6.5,<6.10
+
+# ---------------------------------------------------------------- rencana V1.1+
+# AI Classification (lokal via Ollama / cloud API)
+# pymupdf>=1.24          # ekstraksi teks PDF
+# openpyxl>=3.1          # ekstraksi teks spreadsheet
+# requests>=2.31         # klien Ollama / cloud AI
+#
+# V1.4 Synchronization
+# watchdog>=4.0          # pemantauan folder real-time
+#
+# V1.5 Duplicate Detection (hash cepat)
+# xxhash>=3.4

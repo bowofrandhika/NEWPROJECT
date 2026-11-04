@@ -1,0 +1,4 @@
+# Dependensi pengembangan & build
+-r requirements.txt
+pyinstaller>=6.6
+ruff>=0.5
