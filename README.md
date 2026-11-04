@@ -111,10 +111,13 @@ Repo ini menyertakan galeri HTML berisi render offscreen dari aplikasi asli
 (dark & light, 9 halaman):
 
 ```bash
-python scripts/build_gallery.py          # memperbarui gambar dari kode terbaru
-python -m http.server 8000 -d docs/gallery
+python scripts/serve_gallery.py                 # sajikan galeri di http://localhost:8000
+python scripts/serve_gallery.py --rebuild       # render ulang gambar dari kode terbaru
 ```
 
+Server kecil di `scripts/serve_gallery.py` memakai `ThreadingHTTPServer`, mengirim header
+`no-store` (agar screenshot hasil build ulang tidak tersangkut cache), menyiapkan favicon,
+dan otomatis membangun galeri bila gambarnya belum lengkap.
 Buka `http://localhost:8000`. Galeri hanya untuk melihat tampilan — aplikasi aslinya
 tetap program desktop PySide6, bukan aplikasi web.
 
@@ -168,6 +171,7 @@ NEWPROJECT/
 │   ├── generate_icon.py         # membuat assets/icon.png & .ico
 │   ├── preview_screenshots.py   # data demo + tangkapan layar dokumentasi
 │   ├── build_gallery.py         # galeri HTML (docs/gallery) dari render offscreen
+│   ├── serve_gallery.py         # server galeri (threaded, no-cache, auto-build)
 │   └── build_windows.ps1        # build EXE (onedir/onefile)
 ├── tests/
 │   ├── test_core.py             # database, klasifikasi, organizer, utils

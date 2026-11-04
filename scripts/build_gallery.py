@@ -45,6 +45,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SmartFile Organizer — Galeri Antarmuka V1.0</title>
+<link rel="icon" href="favicon.ico">
 <style>
   :root {{
     --bg:#0e1119; --surface:#161b28; --surface-alt:#1c2231; --border:#232b3d;
@@ -244,6 +245,10 @@ def main() -> int:
             target = image_dir / f"{key}-{theme_name}.jpg"
             window.grab().save(str(target), "JPG", 82)
             print(f"captured {target.relative_to(ROOT)} ({target.stat().st_size // 1024} KB)")
+
+    favicon = ROOT / "assets" / "icon.ico"
+    if favicon.is_file():
+        shutil.copy2(favicon, gallery_dir / "favicon.ico")
 
     payload = [
         {"key": key, "title": title, "caption": caption} for key, title, caption in PAGES
